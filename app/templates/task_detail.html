@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block body %}<h1>{{t.code}} — {{t.title}}</h1>
+<div class="grid"><div class="card"><h2>التفاصيل</h2><table>
+<tr><th>المسؤول</th><td>{{t.assignee.name}}</td></tr><tr><th>كلّفه</th><td>{{t.created_by.name if t.created_by else 'النظام'}}</td></tr>
+<tr><th>الحالة</th><td><span class="badge b-{{t.status.value}}">{{STATUS_AR[t.status]}}</span></td></tr>
+<tr><th>الأولوية</th><td>{{PRIORITY_AR[t.priority]}}</td></tr><tr><th>الموعد النهائي</th><td>{{fmt(t.due_at)}}</td></tr>
+<tr><th>التذكير</th><td>كل {{'%g'|format(t.reminder_interval_hours|float)}} ساعة — القادم: {{fmt(t.next_reminder_at)}}</td></tr>
+<tr><th>إثبات مطلوب</th><td>{{'نعم' if t.requires_proof else 'لا'}}</td></tr>
+<tr><th>العميل</th><td>{{t.client.name if t.client else '—'}}</td></tr><tr><th>الوصف</th><td><pre>{{t.description or '—'}}</pre></td></tr>
+<tr><th>المرفقات</th><td>{{t.attachments|length}}</td></tr></table>
+{% if can_manage %}<form method="post" action="/dashboard/tasks/{{t.id}}/action" style="margin-top:12px"><input type="hidden" name="csrf" value="{{csrf}}">
+<input name="note" placeholder="ملاحظة (اختياري)"><p style="display:flex;gap:8px;flex-wrap:wrap">
+<button name="action" value="remind" class="ghost">تذكير الآن</button><button name="action" value="complete" class="gold">اعتماد كمكتملة</button>
+<button name="action" value="reopen" class="ghost">إعادة للموظف</button><button name="action" value="cancel" class="bad">إلغاء</button></p></form>{% endif %}</div>
+<div class="card"><h2>سجل المتابعة</h2><ul class="clean">{% for e in t.events %}<li><span class="muted">{{fmt(e.created_at)}}</span> — {{e.event_type}}
+{% if e.to_status %}→ <span class="badge b-{{e.to_status}}">{{e.to_status}}</span>{% endif %} {% if e.actor %}<span class="muted">({{e.actor.name}})</span>{% endif %} {{e.note or ''}}</li>{% endfor %}</ul></div>
+<div class="card"><h2>رسائل واتساب المرتبطة</h2><ul class="clean">{% for m in msgs %}<li><span class="badge">{{'صادرة' if m.direction=='out' else 'واردة'}}</span> {{fmt(m.created_at)}} <span class="muted">{{m.status or ''}}</span><pre>{{(m.body or '')[:400]}}</pre></li>{% else %}<li class="muted">لا رسائل</li>{% endfor %}</ul></div></div>{% endblock %}

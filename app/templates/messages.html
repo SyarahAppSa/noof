@@ -1,0 +1,5 @@
+{% extends "base.html" %}{% block body %}<h1>الرسائل</h1><div class="card"><form method="get" style="margin-bottom:10px"><select name="category" onchange="this.form.submit()" style="max-width:220px"><option value="">كل التصنيفات</option>
+{% for c in ['client','employee','supplier','urgent','complaint','appointment','sales_opportunity','follow_up','personal','command','other'] %}<option value="{{c}}" {{'selected' if c==category}}>{{CAT_AR[c]}}</option>{% endfor %}</select></form>
+<table><tr><th>الوقت</th><th>الاتجاه</th><th>الرقم</th><th>النوع</th><th>التصنيف</th><th>المحتوى / الملخص</th><th>الحالة</th></tr>
+{% for m in msgs %}<tr><td>{{fmt(m.created_at)}}</td><td>{{ {'in':'واردة','out':'صادرة','echo':'من تطبيقك'}[m.direction] }}</td><td dir="ltr">{{m.phone}}</td><td>{{m.msg_type}}</td>
+<td>{% if m.category %}<span class="badge b-{{m.category}}">{{CAT_AR.get(m.category, m.category)}}</span>{% endif %}{% if m.needs_owner %} ⚠️{% endif %}</td><td><pre>{{(m.summary or m.body or m.extracted_text or '')[:300]}}</pre></td><td>{{m.status or ''}}</td></tr>{% endfor %}</table></div>{% endblock %}

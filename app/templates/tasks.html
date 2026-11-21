@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block body %}<h1>المهام</h1>
+{% if user.role.value != 'employee' %}<details class="card" style="margin-bottom:16px"><summary>➕ مهمة جديدة</summary>
+<form method="post" action="/dashboard/tasks"><input type="hidden" name="csrf" value="{{csrf}}">
+<div class="row"><div><label>عنوان المهمة</label><input name="title" required></div>
+<div><label>المسؤول</label><select name="assignee_id">{% for s in staff %}<option value="{{s.id}}">{{s.name}}</option>{% endfor %}</select></div>
+<div><label>الموعد النهائي (الرياض)</label><input type="datetime-local" name="due_at"></div>
+<div><label>الأولوية</label><select name="priority">{% for p in priorities %}<option value="{{p.value}}" {{'selected' if p.value=='normal'}}>{{PRIORITY_AR[p]}}</option>{% endfor %}</select></div>
+<div><label>التذكير كل (ساعة) — فارغ = حسب الأولوية</label><input name="reminder_hours" type="number" step="0.5" min="0.5"></div>
+{% if clients %}<div><label>العميل</label><select name="client_id"><option value="">—</option>{% for c in clients %}<option value="{{c.id}}">{{c.name}}</option>{% endfor %}</select></div>{% endif %}</div>
+<label>التفاصيل</label><textarea name="description" rows="2"></textarea>
+<label><input type="checkbox" name="requires_proof" style="width:auto"> يتطلب إثبات إنجاز (ملف/صورة)</label>
+<p><button class="gold">إنشاء وإرسال عبر واتساب</button></p></form></details>{% endif %}
+<div class="card"><form method="get" style="margin-bottom:10px"><select name="status" onchange="this.form.submit()" style="max-width:220px">
+<option value="">كل الحالات</option>{% for s in statuses %}<option value="{{s.value}}" {{'selected' if s.value==status}}>{{STATUS_AR[s]}}</option>{% endfor %}</select></form>
+<table><tr><th>الرمز</th><th>المهمة</th><th>المسؤول</th><th>الحالة</th><th>الأولوية</th><th>الموعد</th><th>تذكيرات</th></tr>
+{% for t in tasks %}<tr><td><a href="/dashboard/tasks/{{t.id}}">{{t.code}}</a>{% if t.is_demo %} <span class="demo">تجريبي</span>{% endif %}</td><td>{{t.title}}</td><td>{{t.assignee.name}}</td>
+<td><span class="badge b-{{t.status.value}}">{{STATUS_AR[t.status]}}</span></td><td><span class="badge b-{{t.priority.value}}">{{PRIORITY_AR[t.priority]}}</span></td>
+<td>{{fmt(t.due_at)}}</td><td>{{t.reminders_sent}}</td></tr>{% else %}<tr><td colspan="7" class="muted">لا توجد مهام</td></tr>{% endfor %}</table></div>{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% block body %}<h1>العملاء والفرص</h1>
+<details class="card" style="margin-bottom:16px"><summary>➕ عميل جديد</summary><form method="post" action="/dashboard/clients"><input type="hidden" name="csrf" value="{{csrf}}">
+<div class="row"><div><label>الاسم</label><input name="name" required></div><div><label>الشركة</label><input name="company"></div>
+<div><label>القطاع</label><input name="sector"></div><div><label>الجوال</label><input name="phone" placeholder="05XXXXXXXX"></div>
+<div><label>الموظف المسؤول</label><select name="owner_user_id"><option value="">—</option>{% for s in staff %}<option value="{{s.id}}">{{s.name}}</option>{% endfor %}</select></div></div>
+<label><input type="checkbox" name="is_vip" style="width:auto"> عميل مهم ⭐</label><p><button class="gold">حفظ</button></p></form></details>
+<div class="card" style="margin-bottom:16px"><h2>العملاء ({{clients|length}})</h2><table><tr><th>الاسم</th><th>الشركة</th><th>القطاع</th><th>الجوال</th><th>الحالة</th><th>المسؤول</th><th>آخر تواصل</th><th>آخر متابعة</th></tr>
+{% for c in clients %}<tr><td>{{c.name}}{% if c.is_vip %} ⭐{% endif %}{% if c.is_demo %} <span class="demo">تجريبي</span>{% endif %}</td><td>{{c.company or '—'}}</td><td>{{c.sector or '—'}}</td><td dir="ltr">{{c.phone or '—'}}</td><td>{{c.status}}</td><td>{{c.owner.name if c.owner else '—'}}</td><td>{{fmt(c.last_contact_at)}}</td><td>{{fmt(c.last_followup_at)}}</td></tr>{% endfor %}</table></div>
+<div class="card"><h2>فرص المبيعات</h2><table><tr><th>العميل</th><th>الفرصة</th><th>المرحلة</th><th>القيمة التقديرية</th><th>عرض السعر</th><th>العقد</th><th>التحصيل</th></tr>
+{% for o in opps %}<tr><td>{{o.client.name}}</td><td>{{o.title}}</td><td><span class="badge">{{STAGE_AR[o.stage]}}</span></td><td>{{o.estimated_value or '—'}}</td><td>{{o.quote_status or '—'}}</td><td>{{o.contract_status or '—'}}</td><td>{{o.collection_status or '—'}}</td></tr>{% else %}<tr><td colspan="7" class="muted">لا توجد فرص</td></tr>{% endfor %}</table></div>{% endblock %}

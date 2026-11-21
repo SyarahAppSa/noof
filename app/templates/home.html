@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% block body %}
+<h1>مرحبًا {{user.name.split()[0]}} 🌷</h1>
+<div class="kpis"><div class="kpi"><small>مهام مفتوحة</small><b>{{open_count}}</b></div>
+<div class="kpi"><small>مهام متأخرة</small><b style="color:var(--bad)">{{overdue|length}}</b></div>
+{% if approvals is defined %}<div class="kpi"><small>بانتظار موافقتك</small><b style="color:var(--warn)">{{approvals|length}}</b></div>
+<div class="kpi"><small>عملاء يحتاجون متابعة</small><b>{{followups|length}}</b></div>
+<div class="kpi"><small>فرص مبيعات مفتوحة</small><b>{{opps|length}}</b></div>{% endif %}</div>
+<div class="grid">
+{% if top5 is defined %}<div class="card"><h2>🎯 أهم ما يجب التركيز عليه</h2><ol>{% for t in top5 %}<li>{{t}}</li>{% else %}<p class="muted">لا شيء عاجل ✅</p>{% endfor %}</ol></div>
+<div class="card"><h2>🟡 موافقات معلقة</h2><ul class="clean">{% for a in approvals[:6] %}<li><a href="/dashboard/approvals">{{a.code}}</a> — {{a.summary}}</li>{% else %}<li class="muted">لا توجد</li>{% endfor %}</ul></div>{% endif %}
+<div class="card"><h2>⏳ المهام المتأخرة</h2><ul class="clean">{% for t in overdue[:8] %}<li><a href="/dashboard/tasks/{{t.id}}">{{t.code}}</a> {{t.title}} — {{t.assignee.name}} <span class="muted">({{fmt(t.due_at)}})</span></li>{% else %}<li class="muted">لا توجد مهام متأخرة ✅</li>{% endfor %}</ul></div>
+<div class="card"><h2>👥 إنجاز الفريق اليوم</h2><table><tr><th>الموظف</th><th>أنجز</th><th>مفتوحة</th><th>متأخرة</th></tr>
+{% for s in stats %}<tr><td>{{s.user.name}}</td><td>{{s.done}}</td><td>{{s.open}}</td><td>{% if s.late %}<span class="badge b-overdue">{{s.late}}</span>{% else %}0{% endif %}</td></tr>{% endfor %}</table></div>
+{% if appts is defined %}<div class="card"><h2>🗓️ المواعيد القادمة</h2><ul class="clean">{% for a in appts %}<li>{{fmt(a.start_at)}} — {{a.title}} <span class="badge b-{{a.status}}">{{a.status}}</span></li>{% else %}<li class="muted">لا مواعيد</li>{% endfor %}</ul></div>
+<div class="card"><h2>💬 رسائل مهمة (48 ساعة)</h2><ul class="clean">{% for m in important %}<li><span class="badge b-{{m.category}}">{{CAT_AR.get(m.category, m.category)}}</span> {{m.phone}}: {{(m.summary or m.body or '')[:120]}}</li>{% else %}<li class="muted">لا توجد</li>{% endfor %}</ul></div>
+<div class="card"><h2>🤝 عملاء يحتاجون متابعة</h2><ul class="clean">{% for c in followups %}<li>{{c.name}}{% if c.is_vip %} ⭐{% endif %} <span class="muted">آخر متابعة: {{fmt(c.last_followup_at)}}</span></li>{% else %}<li class="muted">لا يوجد</li>{% endfor %}</ul></div>{% endif %}
+</div>{% endblock %}

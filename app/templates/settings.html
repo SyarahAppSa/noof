@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% block body %}<h1>الإعدادات</h1><div class="grid">
+<form class="card" method="post" action="/dashboard/settings"><input type="hidden" name="csrf" value="{{csrf}}"><h2>التشغيل (بتوقيت الرياض)</h2>
+<div class="row"><div><label>اسم الشركة</label><input name="company_name" value="{{s.company_name}}"></div>
+<div><label>التقرير الصباحي</label><input type="time" name="morning_report_time" value="{{s.morning_report_time}}"></div>
+<div><label>التقرير المسائي</label><input type="time" name="evening_report_time" value="{{s.evening_report_time}}"></div>
+<div><label>بداية الدوام</label><input type="time" name="work_start" value="{{s.work_start}}"></div><div><label>نهاية الدوام</label><input type="time" name="work_end" value="{{s.work_end}}"></div>
+<div><label>التذكير الافتراضي (ساعة)</label><input type="number" name="default_reminder_hours" value="{{s.default_reminder_hours}}" min="1"></div>
+<div><label>تذكير المهام العاجلة (ساعة)</label><input type="number" name="urgent_reminder_hours" value="{{s.urgent_reminder_hours}}" min="1"></div>
+<div><label>تذكير المهام المرتفعة (ساعة)</label><input type="number" name="high_reminder_hours" value="{{s.high_reminder_hours}}" min="1"></div>
+<div><label>تذكير قبل الموعد (دقيقة)</label><input type="number" name="appointment_reminder_minutes" value="{{s.appointment_reminder_minutes}}"></div>
+<div><label>عميل بلا متابعة بعد (يوم)</label><input type="number" name="client_followup_days" value="{{s.client_followup_days}}"></div></div>
+<label>أيام العمل</label><div style="display:flex;gap:12px;flex-wrap:wrap">{% for d,n in [(6,'الأحد'),(0,'الاثنين'),(1,'الثلاثاء'),(2,'الأربعاء'),(3,'الخميس'),(4,'الجمعة'),(5,'السبت')] %}<label style="display:inline"><input type="checkbox" style="width:auto" name="work_days" value="{{d}}" {{'checked' if d in s.work_days}}> {{n}}</label>{% endfor %}</div>
+<label>أسلوب الرد</label><input name="reply_tone" value="{{s.reply_tone}}">
+{% for k,l in [('reminders_respect_work_hours','التذكيرات داخل ساعات العمل فقط (عدا العاجلة)'),('auto_reply_enabled','تفعيل الردود التلقائية المعتمدة'),('ack_unknown_messages','رد استلام مهذب للرسائل الجديدة'),('owner_inbox_auto_reply','السماح بالرد التلقائي على رقمي الشخصي (Coexistence)'),('proof_required_by_default','إثبات الإنجاز مطلوب افتراضيًا')] %}
+<label style="display:block"><input type="checkbox" style="width:auto" name="{{k}}" {{'checked' if s[k]}}> {{l}}</label>{% endfor %}<p><button class="gold">حفظ</button></p></form>
+<div class="card"><h2>الردود التلقائية المعتمدة</h2><p class="muted">نوف لا ترد تلقائيًا إلا بهذه النصوص، ولا ترد أبدًا على الشكاوى أو الأسعار أو الالتزامات.</p>
+<ul class="clean">{% for r in rules %}<li><b>{{r.name}}</b> {% if not r.enabled %}<span class="badge b-rejected">معطّل</span>{% endif %}<br><span class="muted">كلمات: {{r.keywords|join('، ')}}</span><pre>{{r.answer}}</pre>
+<form method="post" action="/dashboard/rules/{{r.id}}/toggle"><input type="hidden" name="csrf" value="{{csrf}}"><button class="ghost">{{'تعطيل' if r.enabled else 'تفعيل'}}</button></form></li>{% endfor %}</ul>
+<form method="post" action="/dashboard/rules"><input type="hidden" name="csrf" value="{{csrf}}"><label>اسم الرد</label><input name="name" required><label>الكلمات المفتاحية (بفاصلة)</label><input name="keywords" required placeholder="الدوام, ساعات العمل"><label>نص الرد المعتمد</label><textarea name="answer" rows="3" required></textarea><p><button>إضافة واعتماد</button></p></form></div>
+<div class="card"><h2>حالة الطابور</h2><table>{% for k,v in jobs.items() %}<tr><th>{{k}}</th><td>{{v}}</td></tr>{% endfor %}</table><p class="muted">dead = مهام استنفدت المحاولات وتحتاج مراجعة.</p></div></div>{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% block body %}<h1>الفريق والصلاحيات</h1>
+{% if new_key %}<div class="card" style="margin-bottom:16px;border-color:var(--gold)"><b>مفتاح API الجديد (يظهر مرة واحدة فقط):</b><pre dir="ltr">{{new_key}}</pre></div>{% endif %}
+<details class="card" style="margin-bottom:16px"><summary>➕ إضافة عضو</summary><form method="post" action="/dashboard/team"><input type="hidden" name="csrf" value="{{csrf}}">
+<div class="row"><div><label>الاسم الكامل</label><input name="name" required></div><div><label>جوال واتساب</label><input name="phone" required placeholder="05XXXXXXXX"></div>
+<div><label>الدور</label><select name="role"><option value="employee">موظف</option><option value="manager">مدير</option></select></div>
+<div><label>المدير المباشر</label><select name="manager_id"><option value="">—</option>{% for u in team %}{% if u.role.value!='employee' %}<option value="{{u.id}}">{{u.name}}</option>{% endif %}{% endfor %}</select></div>
+<div><label>المسمى</label><input name="title"></div><div><label>أسماء مختصرة (بفاصلة)</label><input name="aliases" placeholder="أبو محمد, فهود"></div>
+<div><label>اسم مستخدم للوحة (اختياري)</label><input name="username"></div><div><label>كلمة مرور (اختياري)</label><input name="password" type="password"></div></div>
+<p><button class="gold">إضافة</button></p></form></details>
+<div class="card"><table><tr><th>الاسم</th><th>الدور</th><th>المسمى</th><th>الجوال</th><th>المدير</th><th>الحالة</th><th></th></tr>
+{% for u in team %}<tr><td>{{u.name}}{% if u.is_demo %} <span class="demo">تجريبي</span>{% endif %}</td><td>{{ROLE_AR[u.role.value]}}</td><td>{{u.title or '—'}}</td><td dir="ltr">{{u.phone}}</td><td>{{u.manager.name if u.manager else '—'}}</td>
+<td>{{'نشط' if u.is_active else 'موقوف'}}</td><td style="display:flex;gap:6px">{% if u.id != user.id %}<form method="post" action="/dashboard/team/{{u.id}}/toggle"><input type="hidden" name="csrf" value="{{csrf}}"><button class="ghost">{{'إيقاف' if u.is_active else 'تفعيل'}}</button></form>{% endif %}
+<form method="post" action="/dashboard/team/{{u.id}}/apikey"><input type="hidden" name="csrf" value="{{csrf}}"><button class="ghost">مفتاح API</button></form></td></tr>{% endfor %}</table></div>{% endblock %}

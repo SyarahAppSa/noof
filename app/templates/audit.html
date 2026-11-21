@@ -1,0 +1,2 @@
+{% extends "base.html" %}{% block body %}<h1>سجل التدقيق</h1><p class="muted">سجل غير قابل للتعديل أو الحذف على مستوى قاعدة البيانات.</p><div class="card"><table><tr><th>الوقت</th><th>المنفذ</th><th>الإجراء</th><th>الكيان</th><th>تفاصيل</th></tr>
+{% for r in rows %}<tr><td>{{fmt(r.created_at)}}</td><td>{{r.actor_type}}{{':' ~ r.actor_id if r.actor_id}}</td><td>{{r.action}}</td><td>{{r.entity_type or ''}}{{':' ~ r.entity_id if r.entity_id}}</td><td dir="ltr" style="font-size:12px">{{r.details|tojson if r.details}}</td></tr>{% endfor %}</table></div>{% endblock %}

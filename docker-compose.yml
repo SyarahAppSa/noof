@@ -1,0 +1,55 @@
+# نوف — مركز قيادة الشركة عبر واتساب
+# التشغيل: docker compose up -d --build
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: noof
+      POSTGRES_USER: noof
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?ضع POSTGRES_PASSWORD في .env}
+      TZ: Asia/Riyadh
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U noof"]
+      interval: 5s
+      retries: 10
+
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://noof:${POSTGRES_PASSWORD}@db:5432/noof
+    depends_on: { db: { condition: service_healthy } }
+    ports: ["127.0.0.1:8000:8000"]   # خلف Caddy فقط
+
+  worker:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://noof:${POSTGRES_PASSWORD}@db:5432/noof
+    depends_on: { db: { condition: service_healthy }, web: { condition: service_started } }
+    command: ["python", "-m", "app.worker"]
+
+  backup:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      TZ: Asia/Riyadh
+      RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes: [./backups:/backups, ./scripts/backup.sh:/backup.sh:ro]
+    depends_on: { db: { condition: service_healthy } }
+    entrypoint: ["sh", "-c", "while true; do sh /backup.sh; sleep 86400; done"]
+
+  caddy:   # HTTPS تلقائي (Let's Encrypt) — مطلوب لأن Meta تشترط HTTPS للـWebhook
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    volumes: [./deploy/Caddyfile:/etc/caddy/Caddyfile:ro, caddy_data:/data]
+    environment: { NOOF_DOMAIN: "${NOOF_DOMAIN:?ضع NOOF_DOMAIN في .env}" }
+    depends_on: [web]
+
+volumes: { pgdata: {}, caddy_data: {} }
