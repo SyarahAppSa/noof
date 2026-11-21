@@ -188,14 +188,11 @@ def _stop(*_):
     _running = False
 
 
-def main():
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    signal.signal(signal.SIGTERM, _stop)
-    signal.signal(signal.SIGINT, _stop)
+def run_loop(should_run=lambda: _running):
     s = get_settings()
     last_tick = 0.0
     log.info("Noof worker started (dry_run=%s)", s.wa_dry_run)
-    while _running:
+    while should_run():
         db = SessionLocal()
         try:
             if time.time() - last_tick >= s.scheduler_tick_seconds:
@@ -211,6 +208,22 @@ def main():
         if n == 0:
             time.sleep(s.worker_poll_seconds)
     log.info("Noof worker stopped")
+
+
+def start_embedded():
+    """للخطط الصغيرة/التجربة: تشغيل العامل داخل عملية الويب في خيط خلفي."""
+    import threading
+
+    t = threading.Thread(target=run_loop, name="noof-embedded-worker", daemon=True)
+    t.start()
+    return t
+
+
+def main():
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGINT, _stop)
+    run_loop()
 
 
 if __name__ == "__main__":

@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% block body %}
+<h1>محاكي واتساب 🧪</h1>
+<p class="muted">وضع التجربة: الرسائل لا تُرسل لواتساب فعليًا. اكتب كأنك المالك أو موظف أو عميل وشاهد ما تفعله نوف. كل الأرقام هنا وهمية.</p>
+<div class="grid" style="grid-template-columns:minmax(0,2fr) minmax(0,1fr)">
+<div class="card">
+<form method="get" style="margin-bottom:12px"><label>أنت تراسل نوف بصفتك:</label>
+<select name="phone" onchange="this.form.submit()">{% for p,n,k in people %}<option value="{{p}}" {{'selected' if p==phone}}>{{n}}</option>{% endfor %}</select></form>
+<div class="chat">{% for m in thread %}
+<div class="bubble {{'me' if m.direction=='in' else 'noof'}}">
+{% if m.direction!='in' %}<small class="muted">نوف{% if m.status=='deferred' %} · مؤجلة حتى يرد (خارج نافذة 24 ساعة){% elif m.template_name %} · قالب {{m.template_name}}{% endif %}</small><br>{% endif %}
+<pre>{{ m.body or '' }}</pre>
+{% if m.direction!='in' and m.raw and m.raw.buttons %}<div class="btns">{% for b in m.raw.buttons %}
+<form method="post" action="/dashboard/simulator" class="inline"><input type="hidden" name="csrf" value="{{csrf}}"><input type="hidden" name="phone" value="{{phone}}">
+<input type="hidden" name="text" value="btn:{{b[0]}}"><button class="ghost">{{b[1]}}</button></form>{% endfor %}</div>{% endif %}
+<small class="muted">{{fmt(m.created_at, with_day=False)}}</small></div>
+{% else %}<p class="muted">لا توجد رسائل بعد. اكتب رسالة أو اختر مثالًا بالأسفل.</p>{% endfor %}</div>
+<form method="post" action="/dashboard/simulator" style="display:flex;gap:8px;margin-top:12px"><input type="hidden" name="csrf" value="{{csrf}}"><input type="hidden" name="phone" value="{{phone}}">
+<input name="text" id="msg" placeholder="اكتب رسالة..." autocomplete="off" autofocus><button class="gold">إرسال</button></form>
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">{% for e in examples %}<button type="button" class="ghost" style="font-size:13px" onclick="document.getElementById('msg').value=this.textContent;document.getElementById('msg').focus()">{{e}}</button>{% endfor %}</div>
+<form method="post" action="/dashboard/simulator" style="margin-top:12px"><input type="hidden" name="csrf" value="{{csrf}}"><input type="hidden" name="phone" value="{{phone}}">
+<button name="action" value="tick" class="ghost">⏱️ تشغيل المجدول الآن (تذكيرات / تأخير / تقارير مستحقة)</button></form>
+</div>
+<div class="card"><h2>آخر ما أرسلته نوف للجميع</h2><ul class="clean">{% for m in recent %}<li><a href="/dashboard/simulator?phone={{m.phone}}">{{names.get(m.phone, m.phone)}}</a>
+<span class="muted">{{'مؤجلة' if m.status=='deferred' else ''}}</span><br><span style="font-size:13px">{{(m.body or '')[:110]}}</span></li>{% else %}<li class="muted">لا شيء بعد</li>{% endfor %}</ul></div>
+</div>{% endblock %}

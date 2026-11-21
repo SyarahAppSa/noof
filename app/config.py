@@ -6,6 +6,7 @@
 from functools import lru_cache
 from zoneinfo import ZoneInfo
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 TZ = ZoneInfo("Asia/Riyadh")
@@ -78,7 +79,18 @@ class Settings(BaseSettings):
 
     # العامل الخلفي
     worker_poll_seconds: float = 2.0
+    embedded_worker: bool = False  # تشغيل العامل داخل الويب (للتجربة/الخطط المجانية)
+    simulator_enabled: bool = False  # صفحة محاكي واتساب في اللوحة (تعمل فقط مع WA_DRY_RUN)
     scheduler_tick_seconds: int = 60
+
+    @field_validator("database_url")
+    @classmethod
+    def _psycopg_driver(cls, v: str) -> str:
+        """يقبل روابط Render/Heroku (postgres:// أو postgresql://) ويحوّلها لمشغّل psycopg3."""
+        for prefix in ("postgres://", "postgresql://"):
+            if v.startswith(prefix):
+                return "postgresql+psycopg://" + v[len(prefix):]
+        return v
 
     @property
     def is_test(self) -> bool:

@@ -83,7 +83,9 @@ def check_csrf(request: Request, token: str):
 
 
 def render(request: Request, name: str, user: User | None, **ctx):
-    ctx.update(request=request, user=user, csrf=csrf_token(request))
+    from app.config import get_settings
+    ctx.update(request=request, user=user, csrf=csrf_token(request),
+               sim_enabled=get_settings().simulator_enabled and get_settings().wa_dry_run)
     return templates.TemplateResponse(request, name, ctx)
 
 
@@ -387,3 +389,76 @@ def toggle_rule(rid: int, request: Request, csrf: str = Form(""), user: User = D
               entity_id=r.id, details={"enabled": r.enabled})
         db.commit()
     return RedirectResponse("/dashboard/settings", 303)
+
+
+# ---------- محاكي واتساب (للتجربة فقط: يعمل مع WA_DRY_RUN) ----------
+
+SIM_CLIENTS = [("966500000021", "عميل تجريبي: شركة الأفق"), ("966500000022", "عميل تجريبي: مؤسسة الندى"),
+               ("966500000031", "عميل تجريبي جديد")]
+SIM_EXAMPLES = {
+    "owner": ["أرسل لفهد تجهيز تقرير المبيعات بكرة قبل الساعة 2", "كلف سارة بمراجعة فواتير المورد اليوم الساعة 4 عاجل مع إثبات",
+              "تابع مع هيفاء كل 6 ساعات حتى تنهي الموضوع", "أضف موعدًا مع العميل خالد يوم الثلاثاء الساعة 11",
+              "من لديه مهام متأخرة؟", "ماذا يحتاج قراري اليوم؟", "أرسل تقرير الموظفين اليومي", "التقرير الصباحي",
+              "ما هي أهم العملاء والفرص التي لم نتابعها؟", "مساعدة"],
+    "employee": ["استلمت", "جاري", "تم", "مهامي", "أحتاج وقت، أقدر أسلمها بكرة الساعة 12"],
+    "client": ["السلام عليكم، متى أوقات الدوام؟", "كم سعر عقد الصيانة السنوي؟", "عندي شكوى، الطلب وصلني ناقص",
+               "أبغى موعد يوم الأربعاء الساعة 10"],
+}
+
+
+def _sim_guard(user: User):
+    from app.config import get_settings
+
+    owner_only(user)
+    s = get_settings()
+    if not (s.simulator_enabled and s.wa_dry_run):
+        raise HTTPException(404)
+
+
+def _sim_people(db: Session):
+    people = [(u.phone, f"{u.name} ({'المالك' if u.role == Role.owner else 'مدير' if u.role == Role.manager else 'موظف'})",
+               "owner" if u.role in (Role.owner, Role.manager) else "employee")
+              for u in db.scalars(select(User).where(User.is_active.is_(True)).order_by(User.role, User.id)).all()]
+    return people + [(p, n, "client") for p, n in SIM_CLIENTS]
+
+
+@router.get("/simulator", response_class=HTMLResponse)
+def simulator(request: Request, phone: str = "", user: User = Depends(current), db: Session = Depends(get_db)):
+    _sim_guard(user)
+    people = _sim_people(db)
+    phone = phone or user.phone
+    kind = next((k for p, _, k in people if p == phone), "client")
+    thread = db.scalars(select(Message).where(Message.phone == phone).order_by(Message.id.desc()).limit(40)).all()[::-1]
+    names = {p: n for p, n, _ in people}
+    recent = db.scalars(select(Message).where(Message.direction == "out").order_by(Message.id.desc()).limit(15)).all()
+    return render(request, "simulator.html", user, people=people, phone=phone, thread=thread, names=names,
+                  recent=recent, examples=SIM_EXAMPLES[kind])
+
+
+@router.post("/simulator")
+def simulator_send(request: Request, phone: str = Form(...), text: str = Form(""), action: str = Form("send"),
+                   csrf: str = Form(""), user: User = Depends(current), db: Session = Depends(get_db)):
+    import uuid
+
+    from app.api.webhook import store_inbound
+    from app.whatsapp.outbox import assistant_channel
+    from app.whatsapp.webhook import Inbound
+    from app.worker import run_jobs_once, scheduler_tick
+
+    _sim_guard(user)
+    check_csrf(request, csrf)
+    if action == "tick":
+        scheduler_tick(db)
+    elif text.strip():
+        payload = None
+        if text.startswith("btn:"):
+            payload, text = text[4:], "زر"
+        store_inbound(db, Inbound(wa_message_id=f"wamid.sim.{uuid.uuid4().hex}", phone=phone,
+                                  phone_number_id=assistant_channel(),
+                                  msg_type="interactive" if payload else "text", text=text.strip(),
+                                  interactive_payload=payload, profile_name="محاكي"))
+        db.commit()
+    for _ in range(30):
+        if run_jobs_once(db, 50) == 0:
+            break
+    return RedirectResponse(f"/dashboard/simulator?phone={phone}", 303)

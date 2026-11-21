@@ -7,6 +7,7 @@
 <a href="/dashboard" class="{{'on' if p=='/dashboard'}}">الرئيسية</a>
 <a href="/dashboard/tasks" class="{{'on' if p.startswith('/dashboard/tasks')}}">المهام</a>
 {% if user.role.value=='owner' %}
+{% if sim_enabled %}<a href="/dashboard/simulator" class="{{'on' if p.startswith('/dashboard/simulator')}}">🧪 المحاكي</a>{% endif %}
 <a href="/dashboard/approvals" class="{{'on' if p.startswith('/dashboard/approvals')}}">الموافقات</a>
 <a href="/dashboard/clients" class="{{'on' if p.startswith('/dashboard/clients')}}">العملاء والفرص</a>
 <a href="/dashboard/appointments" class="{{'on' if p.startswith('/dashboard/appointments')}}">المواعيد</a>
